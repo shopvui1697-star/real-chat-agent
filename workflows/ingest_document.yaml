@@ -1,0 +1,11 @@
+name: ingest_document
+steps:
+  - id: parse_docs
+    after: []
+    capability: parse_docs
+    timeout_sec: 120
+
+  - id: rag_index
+    after: [parse_docs]
+    capability: rag_index
+    params: { namespace_from: context.rag_namespace }

@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-gateway
+spec:
+  replicas: {{ .Values.gateway.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-gateway
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-gateway
+    spec:
+      containers:
+        - name: gateway
+          image: "{{ .Values.global.image.repository }}:{{ .Values.global.image.tag }}"
+          imagePullPolicy: {{ .Values.global.image.pullPolicy }}
+          command: ["uvicorn", "gateway.main:app", "--host", "0.0.0.0", "--port", "8080"]
+          ports:
+            - containerPort: 8080
+          env:
+            - name: REDIS_URL
+              value: {{ .Values.redis.url | quote }}
+            - name: DATABASE_URL
+              value: {{ .Values.postgres.url | quote }}
+            - name: ORCHESTRATOR_URL
+              value: {{ .Values.gateway.env.ORCHESTRATOR_URL | quote }}
+            - name: TEMPORAL_HOST
+              value: {{ .Values.gateway.env.TEMPORAL_HOST | quote }}
+            - name: AUTH_ENABLED
+              value: {{ .Values.gateway.env.AUTH_ENABLED | quote }}
+            - name: RLS_ENABLED
+              value: {{ .Values.gateway.env.RLS_ENABLED | quote }}
+            - name: KAFKA_ENABLED
+              value: {{ .Values.gateway.env.KAFKA_ENABLED | quote }}
+            - name: KAFKA_BOOTSTRAP
+              value: {{ .Values.gateway.env.KAFKA_BOOTSTRAP | quote }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10

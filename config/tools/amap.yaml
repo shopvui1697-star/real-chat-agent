@@ -1,0 +1,36 @@
+tools:
+  - id: amap.maps_weather
+    name: maps_weather
+    server: amap
+    description: Get weather for a city in China
+    parameters:
+      type: object
+      properties:
+        city:
+          type: string
+          description: City name
+      required: [city]
+
+  - id: amap.maps_text_search
+    name: maps_text_search
+    server: amap
+    description: Search places by keyword
+    parameters:
+      type: object
+      properties:
+        keywords:
+          type: string
+      required: [keywords]
+
+  - id: amap.maps_direction_driving
+    name: maps_direction_driving
+    server: amap
+    description: Driving directions between two points
+    parameters:
+      type: object
+      properties:
+        origin:
+          type: string
+        destination:
+          type: string
+      required: [origin, destination]

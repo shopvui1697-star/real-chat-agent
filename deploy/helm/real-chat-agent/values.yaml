@@ -1,0 +1,42 @@
+global:
+  image:
+    repository: real-chat-agent
+    tag: latest
+    pullPolicy: IfNotPresent
+
+gateway:
+  replicas: 2
+  port: 8080
+  env:
+    AUTH_ENABLED: "false"
+    RLS_ENABLED: "true"
+    TEMPORAL_HOST: temporal-frontend:7233
+    ORCHESTRATOR_URL: http://orchestrator:8000
+    KAFKA_ENABLED: "true"
+    KAFKA_BOOTSTRAP: redpanda:9092
+
+orchestrator:
+  replicas: 2
+  port: 8000
+
+worker:
+  replicas: 2
+  concurrency: 4
+
+temporalWorker:
+  replicas: 2
+  taskQueue: chat-deep
+
+redis:
+  url: redis://redis:6379/0
+
+postgres:
+  url: postgresql://chat:chat@postgres:5432/chat_agent
+
+celery:
+  brokerUrl: amqp://guest:guest@rabbitmq:5672//
+  resultBackend: redis://redis:6379/1
+
+ingress:
+  enabled: false
+  host: chat.example.com

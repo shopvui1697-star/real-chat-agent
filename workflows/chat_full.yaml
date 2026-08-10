@@ -1,0 +1,38 @@
+name: chat_full
+steps:
+  - id: rules_eval
+    after: []
+    capability: rules
+
+  - id: memory_load
+    after: [rules_eval]
+    capability: memory_load
+
+  - id: rag_retrieve
+    after: [rules_eval]
+    capability: rag_retrieve
+    optional: true
+    params: { top_k: 8 }
+
+  - id: parse_docs
+    after: [rules_eval]
+    capability: parse_docs
+    optional: true
+    timeout_sec: 60
+
+  - id: context_build
+    after: [memory_load, rag_retrieve, parse_docs]
+    capability: context_build
+
+  - id: llm_generate
+    after: [context_build]
+    capability: llm_generate
+    params: { mode: final_answer, stream: true }
+
+  - id: memory_store
+    after: [llm_generate]
+    capability: memory_store
+
+  - id: persist_reply
+    after: [memory_store]
+    capability: persist_reply

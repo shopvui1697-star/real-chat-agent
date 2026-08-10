@@ -1,0 +1,51 @@
+name: chat_react
+max_iterations: 2
+steps:
+  - id: rules_eval
+    after: []
+    capability: rules
+
+  - id: memory_load
+    after: [rules_eval]
+    capability: memory_load
+
+  - id: tool_catalog_resolve
+    after: [memory_load]
+    capability: tool_catalog_resolve
+
+  - id: llm_plan
+    after: [tool_catalog_resolve]
+    capability: llm_generate
+    params:
+      mode: plan_tools
+
+  - id: rag_retrieve
+    after: [llm_plan]
+    capability: rag_retrieve
+    optional: true
+    params: { top_k: 4 }
+
+  - id: mcp_invoke
+    after: [llm_plan]
+    capability: mcp_invoke
+    optional: true
+    params: { tools_from: context.planned_tools, server: amap }
+
+  - id: context_build
+    after: [rag_retrieve, mcp_invoke]
+    capability: context_build
+
+  - id: llm_observe
+    after: [context_build]
+    capability: llm_generate
+    params:
+      mode: observe
+
+  - id: llm_generate
+    after: [llm_observe]
+    capability: llm_generate
+    params: { mode: final_answer, stream: true }
+
+  - id: persist_turn
+    after: [llm_generate]
+    capability: persist_reply

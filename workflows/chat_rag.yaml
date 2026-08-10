@@ -1,0 +1,28 @@
+name: chat_rag
+steps:
+  - id: rules_eval
+    after: []
+    capability: rules
+
+  - id: memory_load
+    after: [rules_eval]
+    capability: memory_load
+
+  - id: rag_retrieve
+    after: [rules_eval]
+    capability: rag_retrieve
+    params: { top_k: 8 }
+
+  - id: context_build
+    after: [memory_load, rag_retrieve]
+    capability: context_build
+
+  - id: llm_generate
+    after: [context_build]
+    capability: llm_generate
+    params: { mode: final_answer, stream: true }
+
+  - id: persist_turn
+    after: [llm_generate]
+    capability: persist_reply
+    params: { store_memory: true }

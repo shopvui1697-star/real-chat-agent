@@ -1,0 +1,23 @@
+name: chat_simple
+steps:
+  - id: rules_eval
+    after: []
+    capability: rules
+
+  - id: memory_load
+    after: [rules_eval]
+    capability: memory_load
+
+  - id: llm_generate
+    after: [memory_load]
+    capability: llm_generate
+    params:
+      mode: final_answer
+      include_memory_in_prompt: true
+      stream: false
+
+  - id: persist_turn
+    after: [llm_generate]
+    capability: persist_reply
+    params:
+      store_memory: true

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Real Chat Agent</title>
+  <link rel="stylesheet" href="/assets/styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="brand">
+        <span class="brand-mark">◆</span>
+        <div>
+          <h1>Real Chat Agent</h1>
+          <p class="subtitle">Phase 3 · Temporal deep ReAct + research + HITL</p>
+        </div>
+      </div>
+      <div class="header-meta">
+        <span id="workflow-badge" class="badge">—</span>
+        <span id="runtime-badge" class="badge runtime">—</span>
+        <span id="session-label" class="session-id">—</span>
+        <button type="button" id="new-session-btn" class="btn ghost">Session mới</button>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="chat-panel" aria-label="Chat">
+        <div id="messages" class="messages" role="log" aria-live="polite"></div>
+        <form id="compose" class="compose" autocomplete="off">
+          <div class="compose-options">
+            <label class="chk"><input type="checkbox" id="opt-kb" /> KB / RAG</label>
+            <label class="chk"><input type="checkbox" id="opt-tools" /> Tools (ReAct ≤2)</label>
+            <label class="chk"><input type="checkbox" id="opt-deep" /> Deep ReAct (Temporal)</label>
+            <label class="chk"><input type="checkbox" id="opt-research" /> Research mode</label>
+            <label class="chk"><input type="checkbox" id="opt-hitl" /> HITL review</label>
+            <label class="chk max-iter">
+              Max iter
+              <input type="number" id="opt-max-iter" min="3" max="10" value="5" />
+            </label>
+            <label class="chk"><input type="checkbox" id="opt-scope-attachment" /> Search in file</label>
+          </div>
+          <textarea id="attachment" rows="2" placeholder="Attachment text (optional)…" class="attachment-input"></textarea>
+          <div class="compose-row">
+            <textarea id="input" rows="1" placeholder="Nhập tin nhắn…" aria-label="Tin nhắn"></textarea>
+            <button type="submit" id="send-btn" class="btn primary">Gửi</button>
+          </div>
+        </form>
+        <div id="hitl-bar" class="hitl-bar hidden" aria-live="polite">
+          <span>Đang chờ reviewer (HITL)…</span>
+          <button type="button" id="hitl-approve" class="btn primary">Approve</button>
+          <button type="button" id="hitl-reject" class="btn ghost">Reject</button>
+        </div>
+      </section>
+
+      <aside class="timeline-panel" aria-label="Workflow timeline">
+        <h2>Pipeline</h2>
+        <p class="timeline-hint">Celery DAG hoặc Temporal workflow (live)</p>
+        <p id="react-note" class="react-note">ReAct Celery: max 2 iter · Deep/ReSearch → Temporal</p>
+        <ol id="timeline" class="timeline"></ol>
+        <div id="workflow-meta" class="workflow-meta"></div>
+      </aside>
+    </main>
+  </div>
+  <script src="/assets/app.js" type="module"></script>
+</body>
+</html>

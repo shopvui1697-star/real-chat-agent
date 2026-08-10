@@ -1,0 +1,6 @@
+apiVersion: v2
+name: real-chat-agent
+description: Real Chat Agent — gateway, orchestrator, Celery, Temporal worker
+type: application
+version: 0.3.0
+appVersion: "0.3.0"
