@@ -13,7 +13,7 @@
         <span class="brand-mark">◆</span>
         <div>
           <h1>Real Chat Agent</h1>
-          <p class="subtitle">Phase 3 · Temporal deep ReAct + research + HITL</p>
+          <p class="subtitle">Upload file · Rules routing · Phân tích tự động</p>
         </div>
       </div>
       <div class="header-meta">
@@ -28,22 +28,46 @@
       <section class="chat-panel" aria-label="Chat">
         <div id="messages" class="messages" role="log" aria-live="polite"></div>
         <form id="compose" class="compose" autocomplete="off">
-          <div class="compose-options">
-            <label class="chk"><input type="checkbox" id="opt-kb" /> KB / RAG</label>
-            <label class="chk"><input type="checkbox" id="opt-tools" /> Tools (ReAct ≤2)</label>
-            <label class="chk"><input type="checkbox" id="opt-deep" /> Deep ReAct (Temporal)</label>
-            <label class="chk"><input type="checkbox" id="opt-research" /> Research mode</label>
-            <label class="chk"><input type="checkbox" id="opt-hitl" /> HITL review</label>
-            <label class="chk max-iter">
-              Max iter
-              <input type="number" id="opt-max-iter" min="3" max="10" value="5" />
-            </label>
-            <label class="chk"><input type="checkbox" id="opt-scope-attachment" /> Search in file</label>
+          <div class="upload-section">
+            <div id="upload-zone" class="upload-zone" tabindex="0" role="button" aria-label="Upload file">
+              <input type="file" id="file-input" multiple hidden accept=".txt,.md,.csv,.json,.yaml,.yml,.log,.html,.xml,text/*" />
+              <div class="upload-zone-inner">
+                <span class="upload-icon">↑</span>
+                <p class="upload-title">Kéo thả file để phân tích</p>
+                <p class="upload-hint">.txt · .md · .csv · .json · .yaml — tối đa 512KB/file, 5 file</p>
+                <button type="button" id="browse-btn" class="btn ghost upload-browse">Chọn file</button>
+              </div>
+            </div>
+            <ul id="file-list" class="file-list" aria-label="Uploaded files"></ul>
+            <p id="upload-error" class="upload-error hidden" role="alert"></p>
+            <details class="paste-fallback">
+              <summary>Hoặc dán nội dung text</summary>
+              <textarea id="attachment" rows="2" placeholder="Dán nội dung file (optional)…" class="attachment-input"></textarea>
+            </details>
           </div>
-          <textarea id="attachment" rows="2" placeholder="Attachment text (optional)…" class="attachment-input"></textarea>
+
+          <div class="rules-section">
+            <div class="rules-head">
+              <h3>Rules</h3>
+              <span class="rules-sub">Chọn mode → preview pipeline bên phải</span>
+            </div>
+            <div class="compose-options">
+              <label class="chk"><input type="checkbox" id="opt-kb" /> KB / RAG</label>
+              <label class="chk"><input type="checkbox" id="opt-tools" /> Tools (ReAct ≤2)</label>
+              <label class="chk"><input type="checkbox" id="opt-deep" /> Deep ReAct (Temporal)</label>
+              <label class="chk"><input type="checkbox" id="opt-research" /> Research mode</label>
+              <label class="chk"><input type="checkbox" id="opt-hitl" /> HITL review</label>
+              <label class="chk max-iter">
+                Max iter
+                <input type="number" id="opt-max-iter" min="3" max="10" value="5" />
+              </label>
+              <label class="chk"><input type="checkbox" id="opt-scope-attachment" /> Search in file</label>
+            </div>
+          </div>
+
           <div class="compose-row">
-            <textarea id="input" rows="1" placeholder="Nhập tin nhắn…" aria-label="Tin nhắn"></textarea>
-            <button type="submit" id="send-btn" class="btn primary">Gửi</button>
+            <textarea id="input" rows="1" placeholder="Câu hỏi về file hoặc tin nhắn…" aria-label="Tin nhắn"></textarea>
+            <button type="submit" id="send-btn" class="btn primary">Phân tích</button>
           </div>
         </form>
         <div id="hitl-bar" class="hitl-bar hidden" aria-live="polite">
@@ -53,12 +77,26 @@
         </div>
       </section>
 
-      <aside class="timeline-panel" aria-label="Workflow timeline">
-        <h2>Pipeline</h2>
-        <p class="timeline-hint">Celery DAG hoặc Temporal workflow (live)</p>
-        <p id="react-note" class="react-note">ReAct Celery: max 2 iter · Deep/ReSearch → Temporal</p>
-        <ol id="timeline" class="timeline"></ol>
-        <div id="workflow-meta" class="workflow-meta"></div>
+      <aside class="sidebar" aria-label="Pipeline and rules">
+        <section class="timeline-panel">
+          <h2>Pipeline</h2>
+          <p class="timeline-hint">Celery DAG hoặc Temporal workflow (live)</p>
+          <p id="react-note" class="react-note">ReAct Celery: max 2 iter · Deep/ReSearch → Temporal</p>
+          <ol id="timeline" class="timeline"></ol>
+          <div id="workflow-meta" class="workflow-meta"></div>
+        </section>
+
+        <section class="rules-preview-panel" aria-live="polite">
+          <h2>Rules preview</h2>
+          <p class="timeline-hint">Dự đoán workflow trước khi gửi</p>
+          <dl id="rules-preview" class="rules-preview">
+            <div><dt>Intent</dt><dd id="preview-intent">—</dd></div>
+            <div><dt>Workflow</dt><dd id="preview-workflow">—</dd></div>
+            <div><dt>Runtime</dt><dd id="preview-runtime">—</dd></div>
+            <div><dt>LLM tier</dt><dd id="preview-llm">—</dd></div>
+            <div><dt>Rules matched</dt><dd id="preview-rules" class="mono">—</dd></div>
+          </dl>
+        </section>
       </aside>
     </main>
   </div>

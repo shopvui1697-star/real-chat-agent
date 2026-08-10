@@ -179,9 +179,11 @@ class Orchestrator:
 
         result = evaluate_chat_rules(state.context)
         self.metrics.observe_rule_eval_ms(result.eval_ms)
+        llm_agent = preferred_llm_from_actions(result.actions) or "llm_default_v1"
         context_delta = {
             "intent": result.intent,
             "workflow_template": result.workflow_template,
+            "llm_agent": llm_agent,
         }
 
         def mutate(s: WorkflowState) -> WorkflowState:

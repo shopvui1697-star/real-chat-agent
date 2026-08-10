@@ -23,6 +23,24 @@ WORKFLOW_MAP = {
 
 TEMPORAL_TEMPLATES = frozenset({"chat_react_deep", "chat_research"})
 
+# Workflows that benefit from a stronger LLM (tools, multi-step, RAG+attachment).
+SENIOR_LLM_WORKFLOWS = frozenset({
+    "chat_react",
+    "chat_react_deep",
+    "chat_research",
+    "chat_full",
+    "chat_attachment_rag",
+    "chat_attachment_rag_sequential",
+})
+
+SENIOR_LLM_INTENTS = frozenset({
+    "needs_tools",
+    "deep_react",
+    "research",
+    "kb_and_attachment",
+    "rag_on_attachment",
+})
+
 
 def uses_temporal(template: str) -> bool:
     return template in TEMPORAL_TEMPLATES
@@ -88,7 +106,12 @@ def evaluate_chat_rules(context: dict[str, Any]) -> RuleResult:
         workflow = "chat_simple"
         rule_ids.append("route_simple")
 
-    actions.extend([f"intent:{intent}", f"workflow:{workflow}"])
+    llm_agent = preferred_llm_agent(intent, workflow)
+    actions.extend([
+        f"intent:{intent}",
+        f"workflow:{workflow}",
+        f"route:{llm_agent}",
+    ])
     elapsed = (time.perf_counter() - start) * 1000
     return RuleResult(
         matched=True,
@@ -105,8 +128,16 @@ def workflow_path(workflows_dir: Path, template: str) -> Path:
     return workflows_dir / filename
 
 
+def preferred_llm_agent(intent: str, workflow: str) -> str:
+    if workflow in SENIOR_LLM_WORKFLOWS or intent in SENIOR_LLM_INTENTS:
+        return "llm_senior_v1"
+    return "llm_default_v1"
+
+
 def preferred_llm_from_actions(actions: list[str]) -> str | None:
-    for action in actions:
+    for action in reversed(actions):
         if action == "route:llm_senior_v1":
             return "llm_senior_v1"
+        if action == "route:llm_default_v1":
+            return "llm_default_v1"
     return None

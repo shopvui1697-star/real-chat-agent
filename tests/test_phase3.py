@@ -10,6 +10,7 @@ import jwt
 from fastapi.security import HTTPAuthorizationCredentials
 
 from gateway.auth import get_auth_context
+from gateway.main import _rules_preview_from_request, RulesPreviewRequest
 from gateway.routing import resolve_route
 from orchestrator.chat_rules import evaluate_chat_rules, uses_temporal
 from temporal.activities import merge_context
@@ -70,6 +71,30 @@ def test_resolve_route_temporal_research():
     )
     assert engine == "temporal"
     assert template == "chat_research"
+
+
+def test_rules_preview_attachment_with_kb():
+    preview = _rules_preview_from_request(
+        RulesPreviewRequest(
+            attachments=[{"name": "report.md", "text": "# Summary\nRevenue up"}],
+            needs_kb=True,
+            query_scope="",
+        )
+    )
+    assert preview["workflow_template"] == "chat_attachment_rag"
+    assert preview["intent"] == "kb_and_attachment"
+    assert preview["llm_agent"] == "llm_senior_v1"
+
+
+def test_rules_preview_file_only():
+    preview = _rules_preview_from_request(
+        RulesPreviewRequest(
+            attachments=[{"name": "data.csv", "text": "a,b\n1,2"}],
+            query_scope="attachment",
+        )
+    )
+    assert preview["workflow_template"] == "chat_attachment_rag_sequential"
+    assert preview["runtime"] == "celery"
 
 
 def test_merge_context():

@@ -29,6 +29,12 @@ const TEMPORAL_STEPS = [
   "persist_turn",
 ];
 
+const ALLOWED_EXTENSIONS = new Set([
+  ".txt", ".md", ".csv", ".json", ".yaml", ".yml", ".log", ".html", ".xml",
+]);
+const MAX_FILE_SIZE = 512 * 1024;
+const MAX_FILES = 5;
+
 const $ = (sel) => document.querySelector(sel);
 
 const messagesEl = $("#messages");
@@ -52,11 +58,24 @@ const optScopeAttachment = $("#opt-scope-attachment");
 const hitlBar = $("#hitl-bar");
 const hitlApprove = $("#hitl-approve");
 const hitlReject = $("#hitl-reject");
+const uploadZone = $("#upload-zone");
+const fileInput = $("#file-input");
+const browseBtn = $("#browse-btn");
+const fileListEl = $("#file-list");
+const uploadErrorEl = $("#upload-error");
+const previewIntent = $("#preview-intent");
+const previewWorkflow = $("#preview-workflow");
+const previewRuntime = $("#preview-runtime");
+const previewLlm = $("#preview-llm");
+const previewRules = $("#preview-rules");
 
+/** @type {{ id: string, name: string, text: string, size: number }[]} */
+let uploadedFiles = [];
 let sessionId = localStorage.getItem(STORAGE_KEY);
 let sessionConfig = {};
 let busy = false;
 let activeTurnId = null;
+let previewTimer = null;
 
 function api(path, options = {}) {
   return fetch(path, {
@@ -71,11 +90,171 @@ function api(path, options = {}) {
   });
 }
 
+function formatBytes(n) {
+  if (n < 1024) return `${n} B`;
+  return `${(n / 1024).toFixed(1)} KB`;
+}
+
+function fileExtension(name) {
+  const i = name.lastIndexOf(".");
+  return i >= 0 ? name.slice(i).toLowerCase() : "";
+}
+
+function showUploadError(msg) {
+  uploadErrorEl.textContent = msg;
+  uploadErrorEl.classList.remove("hidden");
+}
+
+function clearUploadError() {
+  uploadErrorEl.textContent = "";
+  uploadErrorEl.classList.add("hidden");
+}
+
+function renderFileList() {
+  fileListEl.replaceChildren();
+  if (!uploadedFiles.length) {
+    uploadZone.classList.remove("has-files");
+    return;
+  }
+  uploadZone.classList.add("has-files");
+  for (const file of uploadedFiles) {
+    const li = document.createElement("li");
+    li.className = "file-chip";
+    const name = document.createElement("span");
+    name.className = "file-name";
+    name.textContent = file.name;
+    const meta = document.createElement("span");
+    meta.className = "file-meta";
+    meta.textContent = formatBytes(file.size);
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "file-remove";
+    remove.setAttribute("aria-label", `Remove ${file.name}`);
+    remove.textContent = "×";
+    remove.addEventListener("click", () => {
+      uploadedFiles = uploadedFiles.filter((f) => f.id !== file.id);
+      renderFileList();
+      scheduleRulesPreview();
+    });
+    li.append(name, meta, remove);
+    fileListEl.appendChild(li);
+  }
+  if (uploadedFiles.length && !optScopeAttachment.checked) {
+    optScopeAttachment.checked = true;
+  }
+}
+
+async function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error || new Error("Cannot read file"));
+    reader.readAsText(file);
+  });
+}
+
+async function addFiles(fileList) {
+  clearUploadError();
+  const incoming = Array.from(fileList || []);
+  if (!incoming.length) return;
+
+  for (const file of incoming) {
+    if (uploadedFiles.length >= MAX_FILES) {
+      showUploadError(`Tối đa ${MAX_FILES} file mỗi lần gửi.`);
+      break;
+    }
+    const ext = fileExtension(file.name);
+    if (ext && !ALLOWED_EXTENSIONS.has(ext)) {
+      showUploadError(`Không hỗ trợ ${file.name}. Dùng: ${[...ALLOWED_EXTENSIONS].join(", ")}`);
+      continue;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      showUploadError(`${file.name} vượt 512KB.`);
+      continue;
+    }
+    if (uploadedFiles.some((f) => f.name === file.name)) {
+      showUploadError(`${file.name} đã có trong danh sách.`);
+      continue;
+    }
+    try {
+      const text = await readFileAsText(file);
+      if (!text.trim()) {
+        showUploadError(`${file.name} rỗng hoặc không đọc được.`);
+        continue;
+      }
+      uploadedFiles.push({
+        id: `${file.name}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        name: file.name,
+        text,
+        size: file.size,
+      });
+    } catch {
+      showUploadError(`Không đọc được ${file.name}.`);
+    }
+  }
+  renderFileList();
+  scheduleRulesPreview();
+}
+
+function collectAttachments() {
+  const items = uploadedFiles.map(({ name, text }) => ({ name, text }));
+  const pasted = attachmentEl.value.trim();
+  if (pasted) {
+    items.push({ name: "paste.txt", text: pasted });
+  }
+  return items;
+}
+
+function buildRulesPreviewPayload() {
+  const attachments = collectAttachments();
+  return {
+    attachments,
+    needs_kb: optKb.checked,
+    needs_tools: optTools.checked || optDeep.checked,
+    deep_react: optDeep.checked,
+    research_mode: optResearch.checked,
+    query_scope: optScopeAttachment.checked ? "attachment" : "",
+    max_iterations: parseInt(optMaxIter.value, 10) || 5,
+    workflow_template: sessionConfig.workflow_template || null,
+  };
+}
+
+function renderRulesPreview(data) {
+  previewIntent.textContent = data.intent || "—";
+  previewWorkflow.textContent = data.workflow_template || "—";
+  previewRuntime.textContent = data.runtime || "—";
+  previewLlm.textContent = data.llm_agent === "llm_senior_v1" ? "Senior (mạnh)" : "Default (nhanh)";
+  previewRules.textContent = (data.rule_ids || []).join(", ") || "—";
+  workflowBadgeEl.textContent = data.workflow_template || "idle";
+  runtimeBadgeEl.textContent = data.runtime || "—";
+}
+
+async function refreshRulesPreview() {
+  try {
+    const data = await api("/v1/rules/preview", {
+      method: "POST",
+      body: JSON.stringify(buildRulesPreviewPayload()),
+    });
+    renderRulesPreview(data);
+  } catch {
+    previewIntent.textContent = "—";
+    previewWorkflow.textContent = "—";
+    previewRuntime.textContent = "—";
+    previewLlm.textContent = "—";
+    previewRules.textContent = "—";
+  }
+}
+
+function scheduleRulesPreview() {
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(refreshRulesPreview, 250);
+}
+
 function renderEmpty() {
   messagesEl.replaceChildren();
   const el = document.createElement("div");
   el.className = "empty-state";
-  el.append("Chọn mode và gửi tin nhắn. Deep ReAct / Research dùng Temporal.");
+  el.append("Upload file, chọn rules, rồi đặt câu hỏi phân tích.");
   messagesEl.appendChild(el);
 }
 
@@ -165,10 +344,9 @@ function renderTemporalTimeline(query = {}, workflowStatus = null, template = nu
 
 function renderTimelineIdle() {
   timelineEl.replaceChildren();
-  workflowBadgeEl.textContent = "idle";
-  runtimeBadgeEl.textContent = "—";
   workflowMetaEl.textContent = "Chưa có workflow";
   hideHitl();
+  scheduleRulesPreview();
 }
 
 function hideHitl() {
@@ -304,6 +482,13 @@ async function pollWorkflow(workflowId, turnId, template, runtime) {
   return api(`/v1/sessions/${sessionId}/turns/${turnId}?wait=true`);
 }
 
+function formatUserBubble(text, attachments) {
+  const trimmed = text.trim();
+  if (!attachments.length) return trimmed;
+  const names = attachments.map((a) => a.name).join(", ");
+  return `${trimmed}\n\n📎 ${names}`;
+}
+
 async function sendMessage(text) {
   if (busy || !text.trim()) return;
   busy = true;
@@ -311,11 +496,9 @@ async function sendMessage(text) {
   hideHitl();
   await syncSessionConfig();
 
-  appendMessage("user", text.trim());
+  const attachments = collectAttachments();
+  appendMessage("user", formatUserBubble(text, attachments));
   inputEl.value = "";
-
-  const attText = attachmentEl.value.trim();
-  const attachments = attText ? [{ name: "paste.txt", text: attText }] : [];
 
   const thinkingEl = appendMessage("assistant", "…", "thinking");
   renderTimelineIdle();
@@ -361,6 +544,10 @@ async function sendMessage(text) {
     removeThinking();
     hideHitl();
 
+    uploadedFiles = [];
+    attachmentEl.value = "";
+    renderFileList();
+
     if (turn.assistant_message && streamEl.classList.contains("thinking")) {
       appendMessage("assistant", turn.assistant_message);
     } else if (turn.assistant_message && !streamEl.textContent) {
@@ -383,8 +570,51 @@ async function sendMessage(text) {
     busy = false;
     sendBtn.disabled = false;
     inputEl.focus();
+    scheduleRulesPreview();
   }
 }
+
+uploadZone.addEventListener("click", (e) => {
+  if (e.target === browseBtn || e.target.closest(".file-remove")) return;
+  fileInput.click();
+});
+
+browseBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  fileInput.click();
+});
+
+fileInput.addEventListener("change", () => {
+  addFiles(fileInput.files);
+  fileInput.value = "";
+});
+
+uploadZone.addEventListener("dragover", (e) => {
+  e.preventDefault();
+  uploadZone.classList.add("dragover");
+});
+
+uploadZone.addEventListener("dragleave", () => {
+  uploadZone.classList.remove("dragover");
+});
+
+uploadZone.addEventListener("drop", (e) => {
+  e.preventDefault();
+  uploadZone.classList.remove("dragover");
+  addFiles(e.dataTransfer?.files);
+});
+
+uploadZone.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    fileInput.click();
+  }
+});
+
+for (const el of [optKb, optTools, optDeep, optResearch, optScopeAttachment, optMaxIter]) {
+  el.addEventListener("change", scheduleRulesPreview);
+}
+attachmentEl.addEventListener("input", scheduleRulesPreview);
 
 hitlApprove.addEventListener("click", async () => {
   if (!activeTurnId || !sessionId) return;
@@ -412,6 +642,7 @@ optDeep.addEventListener("change", () => {
     optTools.checked = false;
     optResearch.checked = false;
   }
+  scheduleRulesPreview();
 });
 
 optResearch.addEventListener("change", () => {
@@ -419,6 +650,7 @@ optResearch.addEventListener("change", () => {
     optDeep.checked = false;
     optTools.checked = false;
   }
+  scheduleRulesPreview();
 });
 
 formEl.addEventListener("submit", (e) => {
@@ -437,6 +669,9 @@ newSessionBtn.addEventListener("click", async () => {
   if (busy) return;
   localStorage.removeItem(STORAGE_KEY);
   sessionId = null;
+  uploadedFiles = [];
+  attachmentEl.value = "";
+  renderFileList();
   await ensureSession();
   renderEmpty();
   renderTimelineIdle();
@@ -444,9 +679,11 @@ newSessionBtn.addEventListener("click", async () => {
 
 async function init() {
   renderTimelineIdle();
+  renderFileList();
   try {
     await ensureSession();
     await loadHistory();
+    await refreshRulesPreview();
   } catch (err) {
     messagesEl.replaceChildren();
     const el = document.createElement("div");

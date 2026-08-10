@@ -102,6 +102,8 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-mock}
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
       LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}
+      LLM_MODEL_DEFAULT: ${LLM_MODEL_DEFAULT:-}
+      LLM_MODEL_SENIOR: ${LLM_MODEL_SENIOR:-}
       ORCHESTRATOR_URL: http://orchestrator:8000
       RLS_ENABLED: "true"
       AUTH_ENABLED: "false"

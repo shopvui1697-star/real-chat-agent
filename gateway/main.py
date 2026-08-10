@@ -27,6 +27,7 @@ from gateway.store import (
     workflow_for_turn,
 )
 from orchestrator.audit_kafka import publish_audit
+from orchestrator.chat_rules import evaluate_chat_rules, preferred_llm_from_actions, uses_temporal
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS = ROOT / "workflows"
@@ -89,6 +90,49 @@ class SendMessageRequest(BaseModel):
     deep_react: bool | None = None
     research_mode: bool | None = None
     query_scope: str | None = None
+
+
+class RulesPreviewRequest(BaseModel):
+    attachments: list[AttachmentInput] = Field(default_factory=list)
+    needs_kb: bool = False
+    needs_tools: bool = False
+    deep_react: bool = False
+    research_mode: bool = False
+    query_scope: str | None = None
+    max_iterations: int = 5
+    workflow_template: str | None = None
+
+
+def _rules_preview_from_request(body: RulesPreviewRequest) -> dict[str, Any]:
+    attachments = [{"name": a.name, "text": a.text} for a in body.attachments if a.text.strip()]
+    context: dict[str, Any] = {
+        "attachments": attachments,
+        "has_attachments": len(attachments) > 0,
+        "needs_kb": body.needs_kb,
+        "needs_tools": body.needs_tools or body.deep_react,
+        "deep_react": body.deep_react,
+        "research_mode": body.research_mode,
+        "query_scope": body.query_scope or "",
+        "max_iterations": body.max_iterations,
+        "workflow_template": body.workflow_template,
+    }
+    rules = evaluate_chat_rules(context)
+    llm_agent = preferred_llm_from_actions(rules.actions) or "llm_default_v1"
+    runtime = "temporal" if uses_temporal(rules.workflow_template) else "celery"
+    return {
+        "intent": rules.intent,
+        "workflow_template": rules.workflow_template,
+        "runtime": runtime,
+        "llm_agent": llm_agent,
+        "rule_ids": rules.rule_ids,
+        "actions": rules.actions,
+        "eval_ms": rules.eval_ms,
+    }
+
+
+@app.post("/v1/rules/preview")
+def preview_rules(body: RulesPreviewRequest) -> dict[str, Any]:
+    return _rules_preview_from_request(body)
 
 
 @app.on_event("startup")

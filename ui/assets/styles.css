@@ -94,19 +94,26 @@ code {
 .main {
   flex: 1;
   display: grid;
-  grid-template-columns: 1fr 240px;
+  grid-template-columns: 1fr 260px;
   gap: 1rem;
   margin-top: 1rem;
   min-height: 0;
+  align-items: start;
 }
 
 @media (max-width: 768px) {
   .main {
     grid-template-columns: 1fr;
   }
-  .timeline-panel {
+  .sidebar {
     order: -1;
   }
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .chat-panel {
@@ -181,6 +188,205 @@ code {
   gap: 0.75rem;
   font-size: 0.8rem;
   color: var(--muted);
+}
+
+.rules-section {
+  border-top: 1px solid var(--border);
+  padding-top: 0.65rem;
+}
+
+.rules-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.45rem;
+}
+
+.rules-head h3 {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.rules-sub {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.upload-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.upload-zone {
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  outline: none;
+}
+
+.upload-zone:hover,
+.upload-zone:focus-visible,
+.upload-zone.dragover {
+  border-color: var(--accent-dim);
+  background: rgba(201, 162, 39, 0.05);
+}
+
+.upload-zone.has-files {
+  padding: 0.55rem 0.75rem;
+}
+
+.upload-zone-inner {
+  text-align: center;
+}
+
+.upload-icon {
+  display: inline-block;
+  font-size: 1.25rem;
+  color: var(--accent);
+  margin-bottom: 0.25rem;
+}
+
+.upload-title {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--text);
+}
+
+.upload-hint {
+  margin: 0.25rem 0 0.55rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.upload-browse {
+  font-size: 0.78rem;
+}
+
+.file-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.file-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.45rem 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(201, 162, 39, 0.12);
+  border: 1px solid rgba(201, 162, 39, 0.25);
+  font-size: 0.75rem;
+  max-width: 100%;
+}
+
+.file-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 140px;
+}
+
+.file-meta {
+  color: var(--muted);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.68rem;
+}
+
+.file-remove {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0 0.15rem;
+}
+
+.file-remove:hover {
+  color: var(--fail);
+}
+
+.upload-error {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #f0a8a8;
+}
+
+.upload-error.hidden {
+  display: none;
+}
+
+.paste-fallback {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.paste-fallback summary {
+  cursor: pointer;
+  user-select: none;
+}
+
+.paste-fallback[open] summary {
+  margin-bottom: 0.35rem;
+}
+
+.rules-preview-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.rules-preview-panel h2 {
+  margin: 0 0 0.25rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.rules-preview {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.rules-preview > div {
+  display: grid;
+  grid-template-columns: 88px 1fr;
+  gap: 0.35rem;
+  align-items: baseline;
+}
+
+.rules-preview dt {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.rules-preview dd {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.rules-preview dd.mono {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.72rem;
+  color: var(--accent);
 }
 
 .chk {

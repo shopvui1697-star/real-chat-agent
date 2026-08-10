@@ -10,6 +10,7 @@ from typing import Any
 import redis
 
 from steps.base import StepContext, StepExecutor, StepResult
+from steps.llm_models import resolve_llm_model
 
 
 def _redis() -> redis.Redis:
@@ -91,7 +92,7 @@ class LlmGenerateExecutor(StepExecutor):
     def execute(self, ctx: StepContext) -> StepResult:
         mode = ctx.params.get("mode", "final_answer")
         messages = _messages_from_context(ctx)
-        model = os.getenv("LLM_MODEL", "gpt-4o-mini")
+        model = resolve_llm_model(agent_name=ctx.agent_name, context=ctx.context)
         api_key = os.getenv("OPENAI_API_KEY", "").strip()
         channel = _stream_channel(ctx) if ctx.params.get("stream", mode == "final_answer") else None
 
@@ -110,7 +111,14 @@ class LlmGenerateExecutor(StepExecutor):
             content = _call_openai(messages, model)
             model_used = model
 
-        delta: dict[str, Any] = {"llm_usage": {"model": model_used, "mode": mode}}
+        delta: dict[str, Any] = {
+            "llm_usage": {
+                "model": model_used,
+                "resolved_model": model,
+                "mode": mode,
+                "agent": ctx.agent_name,
+            },
+        }
 
         if mode == "plan_tools":
             try:
