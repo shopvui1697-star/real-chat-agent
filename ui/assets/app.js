@@ -75,6 +75,43 @@ let sessionId = localStorage.getItem(STORAGE_KEY);
 let sessionConfig = {};
 let busy = false;
 let activeTurnId = null;
+let activeWorkflowId = null;
+
+function stepDetailHref(stepId) {
+  if (!activeWorkflowId || !stepId) return null;
+  const url = new URL("/step.html", window.location.origin);
+  url.searchParams.set("workflow_id", activeWorkflowId);
+  url.searchParams.set("step", stepId);
+  return url.toString();
+}
+
+function appendStepDetailLink(li, stepId) {
+  const href = stepDetailHref(stepId);
+  if (!href) return;
+  const link = document.createElement("a");
+  link.className = "step-detail-link";
+  link.href = href;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  link.title = "Chi tiết step (tab mới)";
+  link.setAttribute("aria-label", `Chi tiết ${NODE_LABELS[stepId] || stepId}`);
+  link.textContent = "↗";
+  li.appendChild(link);
+}
+
+function createTimelineItem(stepId, status) {
+  const li = document.createElement("li");
+  li.className = statusClass(status);
+  li.dataset.node = stepId;
+  const dot = document.createElement("span");
+  dot.className = "dot";
+  const label = document.createElement("span");
+  label.className = "step-label";
+  label.textContent = NODE_LABELS[stepId] || stepId;
+  li.append(dot, label);
+  appendStepDetailLink(li, stepId);
+  return li;
+}
 let previewTimer = null;
 
 function api(path, options = {}) {
@@ -308,15 +345,7 @@ function renderTimelineFromNodes(nodes = {}, workflowStatus = null, template = n
   }
   for (const id of ids) {
     const status = typeof nodes[id] === "string" ? nodes[id] : nodes[id]?.status;
-    const li = document.createElement("li");
-    li.className = statusClass(status);
-    li.dataset.node = id;
-    const dot = document.createElement("span");
-    dot.className = "dot";
-    const label = document.createElement("span");
-    label.textContent = NODE_LABELS[id] || id;
-    li.append(dot, label);
-    timelineEl.appendChild(li);
+    timelineEl.appendChild(createTimelineItem(id, status));
   }
   if (template) workflowBadgeEl.textContent = template;
   if (workflowStatus) workflowMetaEl.textContent = `workflow: ${workflowStatus}`;
@@ -326,14 +355,8 @@ function renderTemporalTimeline(query = {}, workflowStatus = null, template = nu
   timelineEl.replaceChildren();
   const iter = query?.iteration || 0;
   for (const step of TEMPORAL_STEPS) {
-    const li = document.createElement("li");
-    li.className = query?.waiting_hitl && step === "llm_observe" ? "active" : "done";
-    const dot = document.createElement("span");
-    dot.className = "dot";
-    const label = document.createElement("span");
-    label.textContent = NODE_LABELS[step] || step;
-    li.append(dot, label);
-    timelineEl.appendChild(li);
+    const status = query?.waiting_hitl && step === "llm_observe" ? "RUNNING" : "DONE";
+    timelineEl.appendChild(createTimelineItem(step, status));
   }
   if (template) workflowBadgeEl.textContent = template;
   const parts = [`temporal: ${workflowStatus || "RUNNING"}`];
@@ -347,6 +370,10 @@ function renderTimelineIdle() {
   workflowMetaEl.textContent = "Chưa có workflow";
   hideHitl();
   scheduleRulesPreview();
+}
+
+function setActiveWorkflow(workflowId) {
+  activeWorkflowId = workflowId || null;
 }
 
 function hideHitl() {
@@ -524,6 +551,7 @@ async function sendMessage(text) {
     workflowBadgeEl.textContent = accepted.workflow_template || "—";
     runtimeBadgeEl.textContent = accepted.runtime || "celery";
     workflowMetaEl.textContent = accepted.workflow_id;
+    setActiveWorkflow(accepted.workflow_id);
 
     es = openSSE(sessionId, accepted.turn_id, (partial) => {
       streamEl.textContent = partial;
@@ -669,6 +697,7 @@ newSessionBtn.addEventListener("click", async () => {
   if (busy) return;
   localStorage.removeItem(STORAGE_KEY);
   sessionId = null;
+  setActiveWorkflow(null);
   uploadedFiles = [];
   attachmentEl.value = "";
   renderFileList();

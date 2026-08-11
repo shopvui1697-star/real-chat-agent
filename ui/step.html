@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Step detail — Real Chat Agent</title>
+  <link rel="stylesheet" href="/assets/styles.css" />
+</head>
+<body class="step-page">
+  <div class="step-shell">
+    <header class="step-header">
+      <div>
+        <p class="step-kicker">Pipeline step</p>
+        <h1 id="step-title">—</h1>
+        <p id="step-subtitle" class="step-subtitle">—</p>
+      </div>
+      <div class="step-header-actions">
+        <span id="step-status-badge" class="badge">—</span>
+        <a id="back-link" class="btn ghost" href="/">← Chat</a>
+      </div>
+    </header>
+
+    <section id="step-meta" class="step-meta" aria-label="Step metadata"></section>
+
+    <section id="step-error" class="step-error hidden" role="alert"></section>
+
+    <section class="step-section">
+      <h2>Result</h2>
+      <pre id="step-result" class="step-json">Loading…</pre>
+    </section>
+
+    <section id="context-section" class="step-section hidden">
+      <h2>Context delta</h2>
+      <pre id="step-context" class="step-json"></pre>
+    </section>
+
+    <section id="output-section" class="step-section hidden">
+      <h2>Output</h2>
+      <pre id="step-output" class="step-json"></pre>
+    </section>
+
+    <section id="extra-section" class="step-section hidden">
+      <h2>Workflow extras</h2>
+      <pre id="step-extra" class="step-json"></pre>
+    </section>
+  </div>
+  <script src="/assets/step.js" type="module"></script>
+</body>
+</html>

@@ -56,6 +56,14 @@ def chat_ui() -> FileResponse:
     return FileResponse(index)
 
 
+@app.get("/step.html")
+def step_ui() -> FileResponse:
+    page = UI_DIR / "step.html"
+    if not page.is_file():
+        raise HTTPException(status_code=404, detail="Step UI not found")
+    return FileResponse(page)
+
+
 class SessionConfig(BaseModel):
     rag_enabled: bool = False
     needs_tools: bool = False
@@ -475,3 +483,35 @@ async def proxy_workflow_status(workflow_id: str) -> dict[str, Any]:
         if resp.status_code >= 400:
             raise HTTPException(status_code=502, detail=resp.text)
         return resp.json()
+
+
+@app.get("/v1/workflows/{workflow_id}/steps/{step_id}")
+async def get_workflow_step(workflow_id: str, step_id: str) -> dict[str, Any]:
+    if engine_for_turn(workflow_id) == "temporal" or workflow_id.startswith("turn_"):
+        from temporal.client import get_temporal_step_detail
+
+        return await get_temporal_step_detail(workflow_id, step_id)
+
+    with httpx.Client(timeout=15.0) as client:
+        resp = client.get(f"{ORCHESTRATOR_URL}/status/{workflow_id}")
+        if resp.status_code == 404:
+            raise HTTPException(status_code=404, detail="Workflow not found")
+        if resp.status_code >= 400:
+            raise HTTPException(status_code=502, detail=resp.text)
+        wf = resp.json()["workflow"]
+        node = wf.get("nodes", {}).get(step_id)
+        if node is None:
+            raise HTTPException(status_code=404, detail=f"Step not found: {step_id}")
+        spec_step = next(
+            (s for s in wf.get("context", {}).get("_workflow_spec", {}).get("steps", []) if s.get("id") == step_id),
+            None,
+        )
+        return {
+            "workflow_id": workflow_id,
+            "step_id": step_id,
+            "runtime": "celery",
+            "workflow_name": wf.get("name"),
+            "workflow_status": wf.get("status"),
+            "capability": spec_step.get("capability") if spec_step else None,
+            "step": node,
+        }
