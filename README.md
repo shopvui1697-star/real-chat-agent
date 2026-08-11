@@ -95,6 +95,7 @@ Workflow: [`workflows/chat_simple.yaml`](workflows/chat_simple.yaml)
 | [08 — Roadmap](docs/08-implementation-roadmap.md) | Phase 1 → 3 |
 | [09 — ADR (VI)](docs/09-design-decisions-vi.md) | Design decisions |
 | [10 — Temporal migration](docs/10-temporal-migration.md) | Celery → Temporal |
+| [11 — Harness Chat Agent](docs/11-harness-chat-agent.md) | Greenfield harness architecture (MEA, task state, HITL) |
 | [On-call runbook](docs/runbooks/oncall.md) | Ops |
 
 ## Phase 3 — Temporal deep ReAct + SaaS infra
